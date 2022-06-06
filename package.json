@@ -8,7 +8,7 @@
     "dev": "node scripts/watch.mjs",
     "prebuild": "vue-tsc --noEmit --p packages/renderer/tsconfig.json && node scripts/build.mjs",
     "build": "electron-builder",
-    "lint": "eslint src/**/*.{js,jsx,vue,ts,tsx} --fix",
+    "lint": "eslint packages/**/*.{js,jsx,vue,ts,tsx} --fix",
     "clean:lib": "rimraf node_modules",
     "clean:release": "rimraf release",
     "reinstall": "rimraf yarn.lock && rimraf package.lock.json && rimraf node_modules && cnpm install"
@@ -29,7 +29,7 @@
     "@types/lodash-es": "^4.17.6",
     "@typescript-eslint/eslint-plugin": "^5.20.0",
     "@typescript-eslint/parser": "^5.20.0",
-    "@vitejs/plugin-vue": "^2.1.0",
+    "@vitejs/plugin-vue": "^2.3.2",
     "electron": "18.0.2",
     "electron-builder": "^23.0.3",
     "eslint": "^8.14.0",
@@ -39,14 +39,14 @@
     "less": "^4.1.2",
     "prettier": "^2.6.2",
     "rimraf": "^3.0.2",
-    "typescript": "^4.6.3",
-    "vite": "^2.9.1",
-    "vite-plugin-electron": "^0.4.3",
-    "vite-plugin-resolve": "^2.0.1",
-    "vue": "^3.2.31",
+    "typescript": "^4.7.2",
+    "vite": "^2.9.8",
+    "vite-plugin-electron": "^0.4.5",
+    "vite-plugin-resolve": "^2.1.2",
+    "vue": "^3.2.36",
     "vue-eslint-parser": "^8.3.0",
     "vue-router": "^4.0.14",
-    "vue-tsc": "^0.31.1"
+    "vue-tsc": "^0.35.2"
   },
   "env": {
     "VITE_DEV_SERVER_HOST": "127.0.0.1",
