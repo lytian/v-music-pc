@@ -1,0 +1,17 @@
+{
+  "title": "V M",
+  "sidebar": {
+    "search": "Search",
+    "songList": "PlayList",
+    "rank": "Rank",
+    "my": "My",
+    "download": "Download",
+    "setting": "Setting"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Search for something...",
+    "minimize": "Minimize",
+    "maximize": "Maximize",
+    "close": "Close"
+  }
+}

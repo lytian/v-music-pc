@@ -1,0 +1,17 @@
+{
+  "title": "V M",
+  "sidebar": {
+    "search": "搜索",
+    "songList": "歌單",
+    "rank": "排行",
+    "my": "我的",
+    "download": "下載",
+    "setting": "設置"
+  },
+  "toolbar": {
+    "searchPlaceholder": "搜索歌曲、歌手...",
+    "minimize": "最小化",
+    "maximize": "最大化",
+    "close": "關閉"
+  }
+}

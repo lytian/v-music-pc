@@ -1,0 +1,61 @@
+@import './colors.less';
+
+// >>> Primary
+@primary-color: #4daf7c;
+@primary-color-hover: fade(darken(@primary-color, 10%), 30%);
+@primary-color-active: fade(darken(@primary-color, 15%), 60%);
+@primary-color-outline: fade(@primary-color, 20%);
+
+@processing-color: @green-600;
+
+// >>> Info
+@info-color: @grey-600;
+
+// >>> Success
+@success-color: @green-600;
+@success-color-hover: fade(lighten(@success-color, 10%), 30%);
+@success-color-active: fade(darken(@success-color, 20%), 60%);
+@success-color-outline: fade(@success-color, 20%);
+
+// >>> Warning
+@warning-color: @orange-600;
+@warning-color-hover: fade(lighten(@warning-color, 10%), 30%);
+@warning-color-active: fade(darken(@warning-color, 20%), 60%);
+@warning-color-outline: fade(@warning-color, 20%);
+
+// >>> Error
+@error-color: @red-600;
+@error-color-hover: fade(lighten(@error-color, 10%), 30%);
+@error-color-active: fade(darken(@error-color, 20%), 60%);
+@error-color-outline: fade(@error-color, 20%);
+
+// >>> Text
+@text-color: fade(@black, 85%);
+@text-color-secondary: fade(@black, 45%);
+@heading-color: fade(@black, 85%);
+@text-selection-bg: @primary-color;
+
+// >>> Font Size
+@font-size-base: 14px;
+@font-size-lg: @font-size-base + 2px;
+@font-size-sm: 12px;
+
+@background-color: #fff;
+// Width
+@width-sidebar: 8%;
+// Height
+@height-toolbar: 54px;
+@height-player: 60px;
+
+// Radius
+@border-radius: 4px;
+
+// 多行省略号
+.no-wrap-n(@n) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: @n;
+  -webkit-box-orient: vertical;
+}
