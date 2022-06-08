@@ -150,28 +150,23 @@ const kwApi: MusicApi = {
       digest = arr[0].replace('digest-', '');
       id = arr[1];
     }
-    throw new Error('Function not implemented.');
-    // if (id.includes('special/single/')) {
-    //   // 歌单详情链接
-    //   id = id.replace(REG_KG_PAGE_LINK, '$1');
-    // } else if (/^\d+$/.test(id)) {
-    //   // 分享的酷狗码
-    //   return getPlaylistDetailByCode(id, page, limit);
-    // } else if (id.startsWith('kg_')) {
-    //   // 点击歌单
-    //   id = id.replace('kg_', '');
-    // }
-    // const res = await request(`http://www2.kugou.kugou.com/yueku/v9/special/single/${id}-5-9999.html`);
-    // const body: string = await res.text();
-    // const listData = JSON.parse(body.match(REG_KG_DATA)![1]);
-    // const list: MusicInfo[] = listData.map((item: any) => handleMusicData(item));
-    // const pageInfo: Pagination<MusicInfo> = {
-    //   page: page,
-    //   limit: limit || 10000,
-    //   total: list.length,
-    //   list: list,
-    // };
-    // return pageInfo;
+    if (digest === '13') {
+    }
+    const res = await request(
+      `http://nplserver.kuwo.cn/pl.svc?op=getlistinfo&pid=${id}&pn=${
+        page - 1
+      }&rn=${limit}&encode=utf8&keyset=pl2012&identity=kuwo&pcmp4=1&vipver=MUSIC_9.0.5.0_W1&newver=1`,
+    );
+    const body: any = await res.json();
+    if (body.result !== 'ok') throw new Error('获取歌单详情失败');
+    const list: MusicInfo[] = body.musiclist.map((item: any) => handleMusicData1(item));
+    const pageInfo: Pagination<MusicInfo> = {
+      page: page,
+      limit: body.rn,
+      total: body.total,
+      list: list,
+    };
+    return pageInfo;
   },
   getRankList: async function (): Promise<RankInfo[]> {
     const res = await request(
@@ -293,6 +288,7 @@ function handleMusicData(rawData: any): MusicInfo {
         break;
     }
   }
+  types.reverse();
   const duration = Number.isNaN(rawData.DURATION) ? 0 : parseInt(rawData.DURATION);
   return {
     source: 'kg',
@@ -310,37 +306,40 @@ function handleMusicData(rawData: any): MusicInfo {
 
 /** 处理歌曲数据 */
 function handleMusicData1(rawData: any): MusicInfo {
-  const types: ToneQuality[] = rawData.relate_goods.map((item: any) => {
-    let type = '';
-    switch (item.bitrate) {
-      case 128:
-        type = '128k';
+  const types: ToneQuality[] = [];
+  const infoArr = rawData.MINFO.split(';');
+  for (let i = 0; i < infoArr.length; i++) {
+    if (!infoArr[i]) continue;
+    const regInfo = infoArr[i].match(REG_QUALITY);
+    switch (regInfo[2]) {
+      case 'flac':
+        types.push({ type: 'flac', size: regInfo[3] });
         break;
-      case 320:
-        type = '320k';
-        break;
-      default:
-        type = 'flac';
+      // case 'ape':
+      //   break
+      case 'mp3':
+        switch (regInfo[1]) {
+          case '320':
+            types.push({ type: '320k', size: regInfo[3] });
+            break;
+          case '192':
+          case '128':
+            types.push({ type: '128k', size: regInfo[3] });
+            break;
+        }
         break;
     }
-    return {
-      type: type,
-      hash: item.hash,
-      size: sizeFormate(item.size),
-    };
-  });
+  }
+  types.reverse();
   return {
-    source: 'kw',
-    id: rawData.album_audio_id,
-    name: decodeName(rawData.name.indexOf(' - ') > -1 ? rawData.name.split(' - ')[1] : rawData.name),
-    img: rawData.cover.replace('{size}', '480'),
-    singerId: rawData.singerinfo.map((o: any) => o.id).join(','),
-    singer: decodeName(rawData.singerinfo.map((o: any) => o.name).join('、')),
-    albumId: rawData.album_id,
-    albumName: decodeName(rawData.albuminfo.name),
-    interval: rawData.timelen / 1000,
-    formatInterval: formatPlayTime(rawData.timelen / 1000),
-    hash: rawData.hash,
+    source: 'kg',
+    id: rawData.id,
+    name: decodeName(rawData.name),
+    singer: decodeName(rawData.artist),
+    albumId: rawData.albumid,
+    albumName: decodeName(rawData.album),
+    interval: parseInt(rawData.duration),
+    formatInterval: formatPlayTime(parseInt(rawData.duration)),
     qualityList: types,
   };
 }
