@@ -123,22 +123,47 @@ const kwApi: MusicApi = {
     }
     const res = await request(url);
     const body: any = await res.json();
-    if (body.code !== SUCCESS_CODE) throw new Error('获取歌单失败');
+    if (!id || type === '10000') {
+      if (body.code !== SUCCESS_CODE) throw new Error('获取歌单失败');
+      const pageInfo: Pagination<PlaylistInfo> = {
+        page: body.data.pn || page,
+        limit: body.data.rn || PAGE_SIZE_PLAYLIST,
+        total: body.data.total || 0,
+        list: [],
+      };
+      pageInfo.list = body.data.data.map((item: any) => ({
+        id: `digest-${item.digest}__${item.id}`,
+        name: item.name,
+        img: item.img,
+        author: item.uname,
+        desc: item.desc,
+        playCount: formatPlayCount(parseInt(item.listencnt)),
+        grade: item.favorcnt / 10,
+      }));
+      return pageInfo;
+    }
+    if (!body.length) throw new Error('获取歌单失败');
+    const list: PlaylistInfo[] = [];
+    body.forEach((item: any) => {
+      if (!item.label) return;
+      list.push(
+        ...item.list.map((item: any) => ({
+          id: `digest-${item.digest}__${item.id}`,
+          name: item.name,
+          img: item.img,
+          author: item.uname,
+          desc: item.desc,
+          playCount: item.play_count && formatPlayCount(item.listencnt),
+          grade: item.favorcnt && item.favorcnt / 10,
+        })),
+      );
+    });
     const pageInfo: Pagination<PlaylistInfo> = {
-      page: body.data.pn || page,
-      limit: body.data.rn || PAGE_SIZE_PLAYLIST,
-      total: body.data.total || 0,
-      list: [],
+      page: page,
+      limit: 1000,
+      total: 1000,
+      list: list,
     };
-    pageInfo.list = body.data.data.map((item: any) => ({
-      id: `digest-${item.digest}__${item.id}`,
-      name: item.name,
-      img: item.img,
-      author: item.uname,
-      desc: item.desc,
-      playCount: formatPlayCount(parseInt(item.listencnt)),
-      grade: item.favorcnt / 10,
-    }));
     return pageInfo;
   },
   getPlaylistDetail: async function (id: string, page: number, limit?: number): Promise<Pagination<MusicInfo>> {
@@ -150,16 +175,46 @@ const kwApi: MusicApi = {
       digest = arr[0].replace('digest-', '');
       id = arr[1];
     }
+    if (digest === '27') {
+      id = id.split('=')[1];
+    }
     if (digest === '13') {
+      // 专辑
+      return this.getAlbumListDetail!(id, page, limit);
+    }
+    if (digest === '5') {
+      const res = await request(
+        `http://qukudata.kuwo.cn/q.k?op=query&cont=ninfo&node=${id}&pn=0&rn=1&fmt=json&src=mbox&level=2`,
+      );
+      const body: any = await res.json();
+      if (!body.child || !body.child.length) throw new Error('获取歌单详情失败');
+      id = body.child[0].sourceid;
     }
     const res = await request(
-      `http://nplserver.kuwo.cn/pl.svc?op=getlistinfo&pid=${id}&pn=${
-        page - 1
-      }&rn=${limit}&encode=utf8&keyset=pl2012&identity=kuwo&pcmp4=1&vipver=MUSIC_9.0.5.0_W1&newver=1`,
+      `http://nplserver.kuwo.cn/pl.svc?op=getlistinfo&pid=${id}&pn=${page - 1}&rn=${
+        limit || 1000
+      }&encode=utf8&keyset=pl2012&identity=kuwo&pcmp4=1&vipver=MUSIC_9.0.5.0_W1&newver=1`,
     );
     const body: any = await res.json();
     if (body.result !== 'ok') throw new Error('获取歌单详情失败');
     const list: MusicInfo[] = body.musiclist.map((item: any) => handleMusicData1(item));
+    const pageInfo: Pagination<MusicInfo> = {
+      page: page,
+      limit: body.rn,
+      total: body.total,
+      list: list,
+    };
+    return pageInfo;
+  },
+  getAlbumListDetail: async function (id: string, page: number, limit?: number): Promise<Pagination<MusicInfo>> {
+    const res = await request(
+      `http://search.kuwo.cn/r.s?pn=${page - 1}&rn=${
+        limit || 1000
+      }&stype=albuminfo&albumid=${id}&show_copyright_off=0&encoding=utf&vipver=MUSIC_9.1.0`,
+    );
+    const body: any = await res.json();
+    if (body.result !== 'ok') throw new Error('获取专辑详情失败');
+    const list: MusicInfo[] = body.musiclist.map((item: any) => handleMusicData2(item, body.name, body.albumid));
     const pageInfo: Pagination<MusicInfo> = {
       page: page,
       limit: body.rn,
@@ -335,9 +390,35 @@ function handleMusicData1(rawData: any): MusicInfo {
     source: 'kg',
     id: rawData.id,
     name: decodeName(rawData.name),
-    singer: decodeName(rawData.artist),
+    singer: decodeName(rawData.artist).replace(/&/g, '、'),
     albumId: rawData.albumid,
     albumName: decodeName(rawData.album),
+    interval: parseInt(rawData.duration),
+    formatInterval: formatPlayTime(parseInt(rawData.duration)),
+    qualityList: types,
+  };
+}
+
+/** 处理专辑歌曲数据 */
+function handleMusicData2(rawData: any, albumName: string, albumId: string): MusicInfo {
+  const types: ToneQuality[] = [];
+  const formats = rawData.formats.split('|');
+  if (formats.includes('MP3128')) {
+    types.push({ type: '128k', size: '' });
+  }
+  if (formats.includes('MP3H')) {
+    types.push({ type: '320k', size: '' });
+  }
+  if (formats.includes('ALFLAC')) {
+    types.push({ type: 'flac', size: '' });
+  }
+  return {
+    source: 'kg',
+    id: rawData.id,
+    name: decodeName(rawData.name),
+    singer: decodeName(rawData.artist).replace(/&/g, '、'),
+    albumId: albumId,
+    albumName: albumName,
     interval: parseInt(rawData.duration),
     formatInterval: formatPlayTime(parseInt(rawData.duration)),
     qualityList: types,

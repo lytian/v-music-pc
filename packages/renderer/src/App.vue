@@ -3,9 +3,13 @@ import Sidebar from './components/core/Sidebar.vue';
 import ToolBar from './components/core/ToolBar.vue';
 import kwSource from './utils/music/source/kw';
 
-kwSource.api.getPlaylist('hot', '146-10000', 1).then((res) => {
+kwSource.api.getTags().then((res) => {
   console.log(res);
-  kwSource.api.getPlaylistDetail(res.list[0].id, 1, 10).then((res) => {
+});
+
+kwSource.api.getPlaylist('hot', '1-43', 1).then((res) => {
+  console.log(res);
+  kwSource.api.getPlaylistDetail(res.list[24].id, 1, 10).then((res) => {
     console.log(res);
   });
 });

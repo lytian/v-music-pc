@@ -192,7 +192,7 @@ declare interface MusicApi {
    * @param {string} id 歌单ID
    * @param {number} page 当前分页
    * @param {number} limit 分页数
-   * @returns {Pagination<MusicInfo>} 歌单分页列表。info里面包含了歌单信息
+   * @returns {Pagination<MusicInfo>} 歌单分页列表
    */
   getPlaylistDetail: (id: string, page: number, limit?: number) => Promise<Pagination<MusicInfo>>;
 
@@ -209,6 +209,15 @@ declare interface MusicApi {
    * @returns {Pagination<MusicInfo>} 榜单歌曲分页列表
    */
   getRankDetail: (id: number | string, page: number) => Promise<Pagination<MusicInfo>>;
+
+  /**
+   * 专辑的歌曲
+   * @param {string} id 专辑ID
+   * @param {number} page 当前分页
+   * @param {number} limit 分页数
+   * @returns {Pagination<MusicInfo>} 歌单分页列表
+   */
+  getAlbumListDetail?: (id: string, page: number, limit?: number) => Promise<Pagination<MusicInfo>>;
 
   /**
    * 歌曲播放地址
