@@ -14,8 +14,6 @@ const REG_KG_GLOBAL_RANK = {
 // script, global.data = [];
 const REG_KG_DATA = /global\.data = (\[.+\]);/;
 
-const RANK_TYPE = ['热门榜', '品牌榜', '特色榜', '全球榜', '其他'];
-
 const kgApi: MusicApi = {
   getHotSearch: async function (): Promise<string[]> {
     const res = await request(
@@ -209,7 +207,6 @@ const kgApi: MusicApi = {
       id: item.rankid,
       name: item.rankname,
       img: item.imgurl.replace('{size}', '240'),
-      type: RANK_TYPE[(item.classify - 1) % RANK_TYPE.length],
       desc: item.intro,
     }));
     return list;

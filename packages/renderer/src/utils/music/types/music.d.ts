@@ -101,7 +101,6 @@ declare interface RankInfo {
   id: string | number;
   name: string;
   thumb?: string;
-  type?: string;
   desc?: string;
 }
 

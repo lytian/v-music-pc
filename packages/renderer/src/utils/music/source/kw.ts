@@ -6,14 +6,13 @@ import { RequestConfig } from '@/utils/request/options';
 
 const SUCCESS_CODE = 200;
 const PAGE_SIZE_PLAYLIST = 36;
+const PAGE_SIZE_RANK = 100;
 
 const REG_QUALITY = /bitrate:(\d+),format:(\w+),size:([\w.]+)/;
 const REG_RELATE_WORD = /RELWORD=(.+)/;
 // http://www.kuwo.cn/playlist_detail/2886046289
 // https://m.kuwo.cn/h5app/playlist/2736267853?t=qqfriend
 const REG_PLAYLIST_DETAIL_LINK = /^.+\/playlist(?:_detail)?\/(\d+)(?:\?.*|&.*$|#.*$|$)/;
-
-const RANK_TYPE = ['热门榜', '品牌榜', '特色榜', '全球榜', '其他'];
 
 let kwToken: string;
 
@@ -177,12 +176,10 @@ const kwApi: MusicApi = {
     }
     if (digest === '27') {
       id = id.split('=')[1];
-    }
-    if (digest === '13') {
+    } else if (digest === '13') {
       // 专辑
       return this.getAlbumListDetail!(id, page, limit);
-    }
-    if (digest === '5') {
+    } else if (digest === '5') {
       const res = await request(
         `http://qukudata.kuwo.cn/q.k?op=query&cont=ninfo&node=${id}&pn=0&rn=1&fmt=json&src=mbox&level=2`,
       );
@@ -224,36 +221,36 @@ const kwApi: MusicApi = {
     return pageInfo;
   },
   getRankList: async function (): Promise<RankInfo[]> {
-    const res = await request(
-      'http://mobilecdnbj.kugou.com/api/v3/rank/list?version=9108&plat=0&showtype=2&parentid=0&apiver=6&area_code=1&withsong=1',
-    );
+    const res = await request('http://qukudata.kuwo.cn/q.k?op=query&cont=tree&node=2&pn=0&rn=1000&fmt=json&level=2');
     const body: any = await res.json();
-    if (body.status !== 1) throw new Error('获取榜单失败');
-    body.data.info.sort((a: any, b: any) => {
-      return a.classify - b.classify;
-    });
-    const list: RankInfo[] = body.data.info.map((item: any) => ({
-      id: item.rankid,
-      name: item.rankname,
-      img: item.imgurl.replace('{size}', '240'),
-      type: RANK_TYPE[(item.classify - 1) % RANK_TYPE.length],
-      desc: item.intro,
-    }));
+    if (!body.child) throw new Error('获取榜单失败');
+    const list: RankInfo[] = [];
+    for (let i = 0; i < body.child.length; i++) {
+      const item = body.child[i];
+      if (item.source != '1') continue;
+      list.push({
+        id: item.sourceid,
+        name: item.name,
+        thumb: item.pic,
+      });
+    }
     return list;
   },
   getRankDetail: async function (id: string | number, page: number): Promise<Pagination<MusicInfo>> {
-    throw new Error('Function not implemented.');
-    // const res = await request(`http://www2.kugou.kugou.com/yueku/v9/rank/home/${page}-${id}.html`);
-    // const body: string = await res.text();
-    // const pageInfo: Pagination<MusicInfo> = {
-    //   page: parseInt(body.match(REG_KG_GLOBAL_RANK.page)![1]),
-    //   limit: parseInt(body.match(REG_KG_GLOBAL_RANK.limit)![1]),
-    //   total: parseInt(body.match(REG_KG_GLOBAL_RANK.total)![1]),
-    //   list: [],
-    // };
-    // const data: any = JSON.parse(body.match(REG_KG_GLOBAL_RANK.listData)![1]);
-    // pageInfo.list = data.map((item: any) => handleMusicData(item));
-    // return pageInfo;
+    const res = await request(
+      `http://kbangserver.kuwo.cn/ksong.s?from=pc&fmt=json&pn=${
+        page - 1
+      }&rn=${PAGE_SIZE_RANK}&type=bang&data=content&id=${id}&show_copyright_off=0&pcmp4=1&isbang=1`,
+    );
+    const body: any = await res.json();
+    const pageInfo: Pagination<MusicInfo> = {
+      page: page,
+      limit: PAGE_SIZE_RANK,
+      total: parseInt(body.num),
+      list: [],
+    };
+    pageInfo.list = body.musiclist.map((item: any) => handleMusicData3(item));
+    return pageInfo;
   },
   getMusicUrl: async function (musicInfo: MusicInfo, type: string): Promise<string> {
     const quality = musicInfo.qualityList.find((o: any) => o.type === type);
@@ -278,17 +275,18 @@ const kwApi: MusicApi = {
     return `https://www.kugou.com/song/#hash=${info.hash}&album_id=${info.albumId}`;
   },
   getSourcePlaylistLink: function (id: string | number): string {
-    if (typeof id == 'string') id = id.replace('kg__', '');
-    return `https://www.kugou.com/yy/special/single/${id}.html`;
-  },
-  getSourceRankLink: function (id: string | number): string {
-    if (typeof id == 'string') id = id.replace('kg__', '');
-    return `https://www.kugou.com/yy/rank/home/1-${id}.html`;
+    id = id.toString();
+    if (/[?&:/]/.test(id)) id = id.replace(REG_PLAYLIST_DETAIL_LINK, '$1');
+    else if (/^digest-/.test(id)) {
+      const result = id.split('__');
+      id = result[1];
+    }
+    return `http://www.kuwo.cn/playlist_detail/${id}`;
   },
 };
 
 const kwSource: MusicSource = {
-  id: 'kg',
+  id: 'kw',
   name: '酷我音乐',
   alias: '小蜗音乐',
   api: kwApi,
@@ -346,7 +344,7 @@ function handleMusicData(rawData: any): MusicInfo {
   types.reverse();
   const duration = Number.isNaN(rawData.DURATION) ? 0 : parseInt(rawData.DURATION);
   return {
-    source: 'kg',
+    source: 'kw',
     id: rawData.MUSICRID.replace('MUSIC_', ''),
     name: decodeName(rawData.SONGNAME),
     singer: decodeName(rawData.ARTIST).replace(/&/g, '、'),
@@ -387,7 +385,7 @@ function handleMusicData1(rawData: any): MusicInfo {
   }
   types.reverse();
   return {
-    source: 'kg',
+    source: 'kw',
     id: rawData.id,
     name: decodeName(rawData.name),
     singer: decodeName(rawData.artist).replace(/&/g, '、'),
@@ -413,7 +411,7 @@ function handleMusicData2(rawData: any, albumName: string, albumId: string): Mus
     types.push({ type: 'flac', size: '' });
   }
   return {
-    source: 'kg',
+    source: 'kw',
     id: rawData.id,
     name: decodeName(rawData.name),
     singer: decodeName(rawData.artist).replace(/&/g, '、'),
@@ -421,6 +419,33 @@ function handleMusicData2(rawData: any, albumName: string, albumId: string): Mus
     albumName: albumName,
     interval: parseInt(rawData.duration),
     formatInterval: formatPlayTime(parseInt(rawData.duration)),
+    qualityList: types,
+  };
+}
+
+/** 处理专辑歌曲数据 */
+function handleMusicData3(rawData: any): MusicInfo {
+  const types: ToneQuality[] = [];
+  const formats = rawData.formats.split('|');
+  if (formats.includes('MP3128')) {
+    types.push({ type: '128k', size: '' });
+  }
+  if (formats.includes('MP3H')) {
+    types.push({ type: '320k', size: '' });
+  }
+  if (formats.includes('ALFLAC')) {
+    types.push({ type: 'flac', size: '' });
+  }
+  return {
+    source: 'kw',
+    id: rawData.id,
+    name: decodeName(rawData.name),
+    img: rawData.pic,
+    singer: decodeName(rawData.artist).replace(/&/g, '、'),
+    albumId: rawData.albumid,
+    albumName: decodeName(rawData.album),
+    interval: parseInt(rawData.song_duration),
+    formatInterval: formatPlayTime(parseInt(rawData.song_duration)),
     qualityList: types,
   };
 }
